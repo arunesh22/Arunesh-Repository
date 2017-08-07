@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Arunesh's Directions Service</title>
+	
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #floating-panel {
+        position: absolute;
+        top: 10px;
+        left: 25%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="floating-panel">
+		<b>Your Locaion: </b>
+		<input type="text" id="myText" value="36.1619091,-86.777751"/>
+		<button id="myButton" onClick="showMyLatLong()">Click for Current Location</button>
+		
+		<br>
+		<b>Select Restaurant: </b>
+		<select id="end">
+		</select>
+		<br>
+		
+		<label id="estimate"></label>
+    </div>
+    <div id="map"></div>
+	
+	
+    <script>
+	
+	 var myLatLng;
+	 myLatLng = {
+                lat: 36.1619091,
+                lng: -86.777751
+            };
+	 var map;
+      var infowindow;
+	  
+	  /*1- initialize and create map with predefined co-ordinates with predefined place search
+	  based on given place type and name.*/
+      function initMap() {
+	  
+        var directionsService = new google.maps.DirectionsService;
+        var directionsDisplay = new google.maps.DirectionsRenderer;
+		 var pyrmont = {lat: 36.1623324, lng: -86.7768825};
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: pyrmont,
+          zoom: 14
+        });
+       
+		infowindow = new google.maps.InfoWindow();
+        var service = new google.maps.places.PlacesService(map);
+        service.nearbySearch({
+          location: pyrmont,
+          radius: 5000,
+          type: "Food",
+	  name: "Indian"
+         //name: "Italian"
+
+        }, callback);
+	  
+	  
+        directionsDisplay.setMap(map);
+		
+		/* Set Traffic Layer on map.*/
+		var trafficLayer = new google.maps.TrafficLayer();
+        trafficLayer.setMap(map);
+
+        var onChangeHandler = function() {
+          calculateAndDisplayRoute(directionsService, directionsDisplay);
+        };
+		
+		//adding events to read starting and ending points from page.
+        document.getElementById('myButton').addEventListener('click', onChangeHandler);
+        document.getElementById('end').addEventListener('change', onChangeHandler);
+      }
+
+	  /*2- Below function is to calculate and Diasplay route between given 2 points. */
+      function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+	   
+		var latLong = document.getElementById("myText").value;
+		var partsOfStr = latLong.split(',');
+		myLatLng = {
+                lat: parseFloat(partsOfStr[0]),
+                lng: parseFloat(partsOfStr[1])
+            };
+        directionsService.route({
+          origin: myLatLng,
+          destination: document.getElementById('end').value,
+          travelMode: 'DRIVING'
+		  //travelMode: 'WALKING'
+        }, function(response, status) {
+          if (status === 'OK') {
+            directionsDisplay.setDirections(response);
+			
+			/* 3.2 - Below 2 lines of statement is to calculate distance and duration between points.*/
+			var point = response.routes[ 0 ].legs[ 0 ];
+			document.getElementById("estimate").innerHTML  =  'Estimated travel time: ' + point.duration.text + ' (' + point.distance.text + ')' ;
+			
+          } else {
+            window.alert('Directions request failed due to ' + status);
+          }
+        });
+      }
+	  
+	  
+	  function showMyLatLong(){
+   if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+    } else {
+        x.innerHTML = "Geolocation is not supported by this browser.";
+    }
+}
+
+  //Print position on page
+	function showPosition(position) {
+		var latlon = position.coords.latitude + "," + position.coords.longitude;
+		document.getElementById("myText").value=latlon ;
+	   //myMap();
+	}
+	
+	//Error handlling
+	function showError(error) {
+		switch(error.code) {
+			case error.PERMISSION_DENIED:
+				x.innerHTML = "User denied the request for Geolocation."
+				break;
+			case error.POSITION_UNAVAILABLE:
+				x.innerHTML = "Location information is unavailable."
+				break;
+			case error.TIMEOUT:
+				x.innerHTML = "The request to get user location timed out."
+				break;
+			case error.UNKNOWN_ERROR:
+				x.innerHTML = "An unknown error occurred."
+				break;
+		}
+	}
+
+	/* 3-  below is callBack method to make call to PlacesService and get places list . */
+	function callback(results, status) {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+		select = document.getElementById('end');
+          for (var i = 0; i < results.length; i++) {
+            createMarker(results[i]);
+	//alert(results[i].name);
+		var opt = document.createElement('option');
+		opt.value = results[i].name;
+		opt.innerHTML = results[i].name;
+		select.appendChild(opt);
+          }
+        }
+      }
+
+	  //Below function is to create markers on found places
+      function createMarker(place) {
+        var placeLoc = place.geometry.location;
+        var marker = new google.maps.Marker({
+          map: map,
+          position: place.geometry.location
+        });
+
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.setContent(place.name);
+          infowindow.open(map, this);
+        });
+      }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXrrdmOX279tryiQyzd0WC5NTClzLITQ4&libraries=places&callback=initMap" async defer></script>
+
+    </script>
+  </body>
+</html>
